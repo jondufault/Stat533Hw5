@@ -1,0 +1,35 @@
+---
+title: "Homework 5"
+author: "Alena Shakhnovich, Nic Walling, Jonathan Dufault"
+date: "September 29, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1
+
+### Algorithm 6.1
+
+
+### Algorithm 6.2
+
+
+### Algorithm 6.3
+
+
+## Problem 2
+
+
+## Problem 3
+
+## Problem 4
+
+### Question 5
+
+### Question 6
+
+### Question 7
+
