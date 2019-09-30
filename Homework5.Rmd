@@ -13,6 +13,49 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Algorithm 6.1
 
+> #### Algorithm 6.1: Best subset selection
+>
+>1. Let $\mathcal{M}_0$ denote the null model, which contains no predictors. This
+model simply predicts the sample mean for each observation.
+>2. For k = 1, 2,...p:
+> (a) Fit all ${p\choose k}$ models that contain exactly k predictors.
+> (b) Pick the best among these ${p \choose k}$ models, and call it $\mathcal{M}_k$. Here best is defined as having the smallest RSS, or equivalently largest $R^2$.
+> 3. Select a single best model from among $\mathcal{M}_0,\cdots,\mathcal{M}_p$ using cross-validated prediction error, Cp (AIC), BIC, or adjusted R2.
+
+
+
+
+```{r}
+LinearModel <- setRefClass("LinearModel",
+                           fields=c("dataset",
+                                    "response"
+                                    ),
+                           methods = list(
+                             createTestAndTrainDataset = function(testPct=0.1){
+                               n = nrow(.self$dataset)
+                               testSize = testPct*n
+                               testDataIndex = sample(1:n,testSize)
+                               
+                               return(testDataIndex)
+                             }
+                           )
+                           )
+
+LinearModel$methods(findBestSubset = function(x){
+  print(x)
+}
+)
+
+x = LinearModel()
+x$dataset = matrix(c(1:6),nrow=6)
+
+print(x$createTestAndTrainDataset(0.2))
+
+
+
+```
+
+
 
 ### Algorithm 6.2
 
