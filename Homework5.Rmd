@@ -342,6 +342,69 @@ data.frame( Nonparametric = quantile(df_boot$Nonparametric, c(0.025, 0.975)),
 ```
 
 ## Problem 3
+\section{Summary of 6.2}
+While subset selection methods allow to choose the best models that contain different number of predictors fitting the least squares, there is a technique that allows to use all the predictors with a constraint that reduces the coefficient estimates to the values close to zero. Such methods include ridge and lasso regression that provide significant variance reduction.
+Ridge regression is the method of minimizing the following quantity:
+$$
+\sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{ij})^2 + \lambda \sum_{j=1}^p \beta_{j}^2 = RSS + \lambda \sum_{j=1}^p \beta_{j}^2
+$$
+where $\lambda$ is a tuning parameter that controls the effect of these two quantities on the coefficient estimates in the regression model and $\lambda \sum_{j=1}^p \beta_{j}^2$ is called a shrinkage penalty that reduces the coefficient estimates when $\lambda$ becomes really large, making the coefficient estimate approach zero, which corresponds to the null model – a model without any predictors. The intercept of the model, however, will not be affected because it represents the mean of the response providing that in the absence of the predictors there is no association with the response and the model will output the mean value of the response variable. For each value of $\lambda$ the new model will be produced, therefore, it is crucial to choose the good tuning parameter. When $\lambda$ is zero the penalty term will become zero and the ordinary least squares will be fitted.
+Ridge regression must be applied with standardizing the predictors by the formula:
+$$
+\~x_{ij} = \frac{x_{ij}}{\sqrt{1/n \sum_{i=1}^n (x_{ij}-\bar{x_j})^2}}
+$$
+due to the fact that multiplying the predictors by a constant can significantly change the coefficient estimates. An example of such a dramatic change is the income variable that can be measured in dollars but might as well be measured in thousands of dollars such that the coefficient estimate will be increased by a factor of 1,000. Therefore, it is important to standardize the predictors - make the standard deviation equal to one, so that the model will not depend on the scale of predictors. The main advantage of the ridge regression over the ordinary least squares is that the increase in $\lambda$ up to a certain point decreases variance, increasing the bias slightly, achieving minimum MSE. In general, ridge regression will perform better than the least squares if number of predictors is greater than number of observations due to trade-off between decreased variance and increase in bias; if the relationship between the variables is linear then the ordinary least squares coefficients will have high variability. Another advantage of the ridge regression is computational feasibility – for a single value of $\lambda$ exactly one model will be produced, in comparison with the best subset selection that has $2^p$ models to consider.
+While ridge regression is a good alternative to the best subset selection algorithms, it has one significant disadvantage – it will always include all the predictors in the model even though their coefficients are close to zero. Lasso regression provides the solution to this by minimizing slightly different quantity:
+$$
+\sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{ij})^2 + \lambda \sum_{j=1}^p |\beta_{j}| = RSS + \lambda \sum_{j=1}^p |\beta_{j}|
+$$
+using $l_1$ norm instead of $l_2$ norm in the penalty term. Lasso regression shrinks the coefficient estimates towards zero, but in the contrast with ridge, they actually can become zero so that they are excluded from the model. In fact, lasso performs variable selection similarly to the best subset algorithms. Generally, it easier to interpret the coefficients produced by lasso rather than by ridge since the estimates can actually be zero.
+It is possible to show that the problems solved by lasso and ridge are such that 
+\begin{equation*}
+\begin{aligned}
+& \underset{\beta}{\text{minimize}}
+& & \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{ij})^2 \\
+& \text{subject to}
+& & \sum_{j=1}^p |\beta_j|\leq s
+\end{aligned}
+\end{equation*}
+\begin{equation*}
+\begin{aligned}
+& \underset{\beta}{\text{minimize}}
+& & \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{ij})^2 \\
+& \text{subject to}
+& & \sum_{j=1}^p \beta_j^2\leq s
+\end{aligned}
+\end{equation*}
+where $s$ is a constraint represented by the diamond $|\beta_1| + |\beta_2| \leq s$ in the first case and by the circle $\beta_{1}^2 + \beta_{2}^2 \leq s$ in the second case. If the constraint is not that restrictive, meaning $s$ is quite large, then ordinary least squares will satisfy the inequality providing least squares estimates. In other cases, if $s$ is small, then $\sum_{j=1}^p |\beta_j|$ or $\sum_{j=1}^p \beta_j^2$ have to be smaller in order not to violate the constraint.
+Geometrically speaking, the lasso constraint represents a diamond and the RSS are ellipses spreading until one of them touches the border of the diamond – in many cases it will happen at the corner on the axis, making one of the coefficients zero. In the case of ridge regression, the constraint is a circle which RSS would often intersect not on the axis so that the coefficient estimates will be non-zero. In high-dimensional space lasso might make many coefficients zero simultaneously.
+In general, lasso performs variable selection with coefficients that are easier to interpret, while ridge will decrease variance in exchange to a slight increase in bias.
+Consider a special case when number of predictors is the same as the number of observations, and the matrix of predictors consists of 1’s on the diagonal and 0’s off that. Then, the problem of minimizing two quantities in the ridge regression simplifies to: 
+$$
+\sum_{j=1}^p (y_i  - \beta_{j})^2 + \lambda \sum_{j=1}^p \beta_{j}^2
+$$
+And in lasso regression to 
+$$
+\sum_{j=1}^p (y_i  - \beta_{j})^2 + \lambda \sum_{j=1}^p |\beta_{j}|
+$$
+so that the coefficient estimates take the form $\hat{\beta_{j}^R} = y_i/(1+\lambda)$ in the ridge and,
+$$
+\hat{\beta}_{j}^L = \left\{
+        \begin{array}{ll}
+            y_i - \lambda/2 & \quad y_j > \lambda/2 \\
+            y_i + \lambda/2 & \quad y_j < -\lambda/2 \\
+            0 & \quad |y_j| \leq \lambda/2
+        \end{array}
+    \right.
+$$
+lasso respectively. It is easy to see that all the coefficients in the ridge setting are shrunk by the same proportion, while in lasso the coefficients are compared with the absolute value of $\lambda/2$ and shrunk by more or less the same amount, or entirely to zero if the coefficient is less than or equal to $\lambda/2$. This type of shrinkage is called soft thresholding.
+Consider the Bayesian perspective of ridge and lasso regression – posterior distribution is proportional to the product of prior and likelihood of the data up to a proportionality constant:
+$$
+p(\beta|X,Y) \propto f(Y|X, \beta)p(\beta|X) = f(Y|X,\beta)p(\beta)
+$$
+
+Using the linear model with errors that follow normal distribution, assume that prior distribution of coefficient estimates is some function of $g$: $p(\beta) = {\prod_{j=1}^p g(\beta_j)}$. Then the ridge regression solution is the posterior mode for $\beta$, if $g$ is Gaussian family with the mean zero and standard deviation being a function of $\lambda$. In case when $g$ is double-exponential with the mean zero and scale parameter is a function of $\lambda$- lasso solution if the posterior mode of $\beta$.
+Selecting the tuning parameter lambda is crucial for ridge and lasso regression. Cross validation helps determine the value that makes its error the smallest. First, the cross-validated error is computed for the grid of $\lambda$ values. The final model is refitted with the selected value and all the observations.
 
 ## Problem 4
 
