@@ -303,13 +303,12 @@ x$backwardSelection()
 ```{r}
 library(MASS)
 attach(Boston)
-mu.hat <- mean(medv)
-mu.hat
-se.hat <- sd(medv) / sqrt(dim(Boston)[1])
-se.hat
-set.seed(1)
+muh <- mean(medv)
+muh
+seh <- sd(medv) / sqrt(dim(Boston)[1])
+seh
 library(boot)
-boot.fn <- function(data, index) {
+boot.f <- function(data, index) {
   mu <- mean(data[index])
   return (mu)
 }
@@ -317,15 +316,15 @@ boot(medv, boot.fn, 1000)
 t.test(medv)
 CI.mu.hat <- c(22.53 - 2 * 0.4119, 22.53 + 2 * 0.4119)
 CI.mu.hat
-med.hat <- median(medv)
-med.hat
-boot.fn1 <- function(data, index) {
+medh <- median(medv)
+medh
+boot.f1 <- function(data, index) {
   mu <- median(data[index])
   return (mu)
 }
-boot(medv, boot.fn1, 1000)
-percent.hat <- quantile(medv, c(0.1))
-percent.hat
+boot(medv, boot.f1, 1000)
+p.hat <- quantile(medv, c(0.1))
+p.hat
 
 
 ```
