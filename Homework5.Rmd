@@ -120,19 +120,160 @@ ALMO_ETIP$methods(findBestSubset = function(){
     
       
   }
-  # Next lest find the best model among the best models. 
   
-  bestr2 = 0
+  
+  # Next lets find the best model among the best models. 
+  bestModel = .self$.chooseBestModel(bestModelWithiFeatures,"AdjRSq")
+  return(bestModel)
+})
+
+
+ALMO_ETIP$methods(.chooseBestModel=function(modelList,criteria){
+  # Chooses best model using fit criteria.
+  
+  if (criteria == "AdjRSq"){
+      bestr2 = 0
   bestModel = NA
-  for (modelK in bestModelWithiFeatures){
+  for (modelK in modelList){
     if(summary(modelK)$adj.r.squared>bestr2){
       bestr2=summary(modelK)$adj.r.squared
       bestModel = modelK
     }
   }
-  return(modelK)
+  }
+  
+  return(bestModel)
+  
+  print("sdgkj")
+  
+})
+
+```
+
+### 6.2
+```{r}
+ALMO_ETIP$methods(forwardSelection = function(){
+  # Let's first Naiively find the best model at each number of features
+  bestModelWithiFeatures = list()
+   availableFeatures = c(1:.self$.k)
+    currentFeatures = c()
+  
+    for (i in 1:.self$.k){
+
+    # Can't really think of any better way to do this than "MAX=0, IF GREATER NEW MAX"
+    bestr2 = 0
+    bestModel = 999
+    bestIndex = 0
+    
+    for (j in 1:length(availableFeatures)){
+   
+      candidateFeatureIndices = c(currentFeatures,availableFeatures[j])
+      candidateiFeatures = .self$.featureNames[candidateFeatureIndices]
+      # This was an unwieldy formula, so I split it up into builders
+      xPartOfFormula = paste(candidateiFeatures,collapse="+")
+      regressionFormula = as.formula(paste(.self$response,"~",xPartOfFormula))
+      
+      
+      candidateModel = lm(regressionFormula,data=.self$.trainDataset)
+      
+      if(summary(candidateModel)$r.squared>bestr2){
+        bestModel = candidateModel
+        bestr2 = summary(candidateModel)$r.squared
+        bestIndex = availableFeatures[j]
+      }
+    
+    }  
+      if(bestr2==0){
+        stop("Something has gone horribly wrong.")
+      }
+      else{
+        bestModelWithiFeatures[[i]] = bestModel
+        availableFeatures = availableFeatures[availableFeatures != bestIndex]
+        currentFeatures = c(currentFeatures,bestIndex)
+        
+
+      }
+    
+
+      
+    
+    
+      
+  }
+  
+  
+  # Next lets find the best model among the best models. 
+  bestModel = .self$.chooseBestModel(bestModelWithiFeatures,"AdjRSq")
+  return(bestModel)
 }
 )
+
+
+```
+
+
+### 6.3
+
+```{r}
+
+ALMO_ETIP$methods(backwardSelection = function(){
+  # Let's first Naiively find the best model at each number of features
+  bestModelWithiFeatures = list()
+  bestModelWithiFeatures[[.self$.k]] = lm(as.formula(paste(.self$response,"~",paste(.self$.featureNames,sep="+"))),data=.self$.trainDataset)
+   currentFeatures = c(1:.self$.k)
+    for (i in 1:(.self$.k-1)){
+
+    # Can't really think of any better way to do this than "MAX=0, IF GREATER NEW MAX"
+    bestr2 = 0
+    bestModel = 999
+    bestIndex = 0
+    
+    for (j in 1:length(currentFeatures)){
+   
+      candidateFeatureIndices = currentFeatures[-j]
+      candidateiFeatures = .self$.featureNames[candidateFeatureIndices]
+      # This was an unwieldy formula, so I split it up into builders
+      xPartOfFormula = paste(candidateiFeatures,collapse="+")
+      regressionFormula = as.formula(paste(.self$response,"~",xPartOfFormula))
+      
+      
+      candidateModel = lm(regressionFormula,data=.self$.trainDataset)
+      
+      if(summary(candidateModel)$r.squared>bestr2){
+        bestModel = candidateModel
+        bestr2 = summary(candidateModel)$r.squared
+        worstIndex = currentFeatures[j]
+      }
+    
+    }  
+      if(bestr2==0){
+        stop("Something has gone horribly wrong.")
+      }
+      else{
+        bestModelWithiFeatures[[i]] = bestModel
+        currentFeatures = currentFeatures[currentFeatures != worstIndex]
+        
+
+      }
+    
+
+      
+    
+    
+      
+  }
+  
+  
+  # Next lets find the best model among the best models. 
+  bestModel = .self$.chooseBestModel(bestModelWithiFeatures,"AdjRSq")
+  return(bestModel)
+}
+)
+
+
+
+
+
 
 x = ALMO_ETIP$new(dataset=iris[,-c(5)],
                     response="Sepal.Length"
@@ -140,6 +281,9 @@ x = ALMO_ETIP$new(dataset=iris[,-c(5)],
 
 
 x$findBestSubset()
+x$forwardSelection()
+
+x$backwardSelection()
 
 ```
 
