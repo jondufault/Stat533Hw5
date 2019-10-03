@@ -288,13 +288,6 @@ x$backwardSelection()
 ```
 
 
-
-### Algorithm 6.2
-
-
-### Algorithm 6.3
-
-
 ## Problem 2
 
 
@@ -307,4 +300,32 @@ x$backwardSelection()
 ### Question 6
 
 ### Question 9
+library(MASS)
+attach(Boston)
+mu.hat <- mean(medv)
+mu.hat
+se.hat <- sd(medv) / sqrt(dim(Boston)[1])
+se.hat
+set.seed(1)
+library(boot)
+boot.fn <- function(data, index) {
+  mu <- mean(data[index])
+  return (mu)
+}
+boot(medv, boot.fn, 1000)
+t.test(medv)
+CI.mu.hat <- c(22.53 - 2 * 0.4119, 22.53 + 2 * 0.4119)
+CI.mu.hat
+med.hat <- median(medv)
+med.hat
+boot.fn1 <- function(data, index) {
+  mu <- median(data[index])
+  return (mu)
+}
+boot(medv, boot.fn1, 1000)
+percent.hat <- quantile(medv, c(0.1))
+percent.hat
 
+
+
+## Appendix
