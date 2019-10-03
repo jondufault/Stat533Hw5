@@ -7,6 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(MASS)
+library(kableExtra)
 ```
 
 ## Problem 1
@@ -21,13 +26,96 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ## Problem 2
+This problem focuses on the two methods of bootstrapping, Nonparametric and Parametric.  We are given a paired data set and asked to compute distributions for Fisher's z-transformation equation.  To start the code, we set up a function to compute the z-transformation.  Then we run the bootstrapp samples simultaneously in the data frame df_boot.  The Nonparametric approach resamples from the given data set, while the Parametric approach samples from the bivariate normal distribution with the sample mean, and covariance matrix given in the problem.  In the below graph the blue distribution shows the nonparametric bootstrapp sample centered around the red line which represents the observed z-transformation.  The orange distribution shows the parametric sample, centered at 0.  The parametric sample is centered here because we assumed no covariance in the data with the given covariance matrix.  If we were to use the observed covariance matrix from the data, the distributions would align more closley.
 
+```{r}
+
+pair = read.delim("pair.txt", sep = ",", header = F)
+
+n = nrow(pair)
+
+z = function(df) {
+    r = cor(df)
+    r = r[upper.tri(r)]
+    0.5 * log((1 + r)/(1 - r))
+}
+
+xbar = apply(pair, 2, mean)
+
+sigma = matrix(c(2, 0, 0, 4), 2)
+
+phi = z(pair)
+
+df = data.frame(indx = 1:2000)
+
+df_boot = df %>% group_by(indx) %>%
+                 mutate(Nonparametric = z(sample_n(pair, size = 200,replace = T)),
+                        Parametric = z(mvrnorm(n = 200, xbar, sigma)))
+
+
+df_b_long = df_boot %>% gather(indx)
+
+ggplot(data = df_b_long, aes(x = value, fill = indx)) + geom_density(alpha = 0.75) + 
+    scale_fill_brewer(palette = "Dark2") +
+     geom_vline(aes(xintercept = phi), col = "red")+
+     labs(title = "Bootstrapp Sample Distributions", x = "z",
+            subtitle = "Red line represents observed z value",fill = "Type")
+```
+
+
+We are also asked to compute the confidence intervals for each method, plus the theoretical interval using fisher's formula.  The below code produces this table which gives these intervals.  We see the theoretical interval is much wider than the bootstrapp intervals.  This too is largley dependent on the number of samples in our bootstrapp distributions.  If we went with smaller bootstrapp sample sizes, we would see larger confidence intervals.
+
+```{r}
+data.frame( Nonparametric = quantile(df_boot$Nonparametric, c(0.025, 0.975)),
+            Parametric = quantile(df_boot$Parametric, c(0.025, 0.975)),
+            Theoretical=c(phi - 1.96/sqrt(n - 3), phi + 1.96/sqrt(n - 3))) %>%
+  kable(caption='Confidence Intervals') %>%
+  kable_styling(latex_options = "HOLD_position")
+```
 
 ## Problem 3
 
 ## Problem 4
 
 ### Question 5
+The problem asks us to build a logistic regression model using the default data set, first with income and balance as the predictors, then with student included.  We are to use a validation set approach, computing the validation set error, and repeat this three times for each model.  We first set up a specific function to split the data into training and testing sets, train the model on the training set, then use the model to make the predictions on the test set.  Then we calculate the missclassification rate, which is the fraction of observations in the test set that were missclassified.  To extend this a little further we included the precision and recall rates.  These are specific to the type I and II errors of the model predictions.  Given the low rate of defaults in the data set, we might want to pay closer attention to the recall rate.  We do not see much change between the three iterations.  While the overall missclassification rate is fairly low, the recall is very low around 30%.  This represents how many of the defaults we actually predicted correctly.  Adding student to the model, there is not much change in the missclassification rate or the recall rate.
+
+```{r}
+
+default = read.csv("Default.csv")
+
+dflt_n = nrow(default)
+default$default = recode(default$default, No = 0, Yes = 1)
+
+
+dflt_log = function(seed, formula) {
+    set.seed(seed)
+    dflt_trn_idx = sample(1:dflt_n, dflt_n * 0.8)
+    dflt_trn = default[dflt_trn_idx, ]
+    dflt_tst = default[-dflt_trn_idx, ]
+    dflt_fit = glm(formula, data = dflt_trn, family = binomial())
+    dflt_tst = dflt_tst %>%
+            mutate(prd = ifelse(
+                            predict(dflt_fit, dflt_tst, type = "response") > 0.5, 1, 0),
+                   correct = prd == default)
+    dflt_errs = dflt_tst %>% mutate(l = prd == default) %>%
+                group_by(default) %>% 
+                summarise(rate = mean(l))
+    data.frame(Accuracy = mean(dflt_tst$correct),
+            Missclassification = 1 - mean(dflt_tst$correct),
+            Precision = as.double(dflt_errs[1, 2]), 
+            Recall = as.double(dflt_errs[2, 2]))
+}
+
+
+dflt_tries = data.frame(seed = sample(1:1000, 3))
+
+apply(dflt_tries, 1, function(x) dflt_log(x, formula = default ~ income + balance)) 
+
+dflt_tries2 = data.frame(seed = sample(1:1000, 3))
+
+apply(dflt_tries2, 1, function(x) dflt_log(x, formula = default ~ income + balance + student)) 
+```
 
 ### Question 6
 
