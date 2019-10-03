@@ -16,22 +16,12 @@ library(kableExtra)
 
 ## Problem 1
 
-### Algorithm 6.1
 
-> #### Algorithm 6.1: Best subset selection
->
->1. Let $\mathcal{M}_0$ denote the null model, which contains no predictors. This
-model simply predicts the sample mean for each observation.
->2. For k = 1, 2,...p:
-> (a) Fit all ${p\choose k}$ models that contain exactly k predictors.
-> (b) Pick the best among these ${p \choose k}$ models, and call it $\mathcal{M}_k$. Here best is defined as having the smallest RSS, or equivalently largest $R^2$.
-> 3. Select a single best model from among $\mathcal{M}_0,\cdots,\mathcal{M}_p$ using cross-validated prediction error, Cp (AIC), BIC, or adjusted R2.
+For this problem, I've created a reference class ALMO_ETIP to handle some of the functions essential for feeding data into and evaluating the algorithms below.
 
+The code is included in the appendix section at the end.
 
-
-
-```{r}
-
+```{r, echo=F}
 
 # ALMO_ETIP : A Linear Model Over-Engineered To Impress Professor
 
@@ -81,6 +71,43 @@ ALMO_ETIP <- setRefClass("LinearModel",
                            )
                            )
 
+
+ALMO_ETIP$methods(.chooseBestModel=function(modelList,criteria){
+  # Chooses best model using fit criteria.
+  
+  if (criteria == "AdjRSq"){
+      bestr2 = 0
+  bestModel = NA
+  for (modelK in modelList){
+    if(summary(modelK)$adj.r.squared>bestr2){
+      bestr2=summary(modelK)$adj.r.squared
+      bestModel = modelK
+    }
+  }
+  }
+  
+  return(bestModel)
+  
+})
+
+```
+
+Let's initialize the class with our data, and then we will add methods corresponding to our algorithms below.
+
+```{r}
+x = ALMO_ETIP$new(dataset=iris[,-c(5)],
+                    response="Sepal.Length"
+)
+
+```
+
+### Algorithm 6.1
+
+Find best subset tries to find the model with the smallest residual sum of squares error for each number of features included in the model.
+
+It then chooses the absolute best model by comparing each of the candidate best models.
+
+```{r}
 ALMO_ETIP$methods(findBestSubset = function(){
   # Let's first Naiively find the best model at each number of features
   bestModelWithiFeatures = list()
@@ -133,29 +160,18 @@ ALMO_ETIP$methods(findBestSubset = function(){
 })
 
 
-ALMO_ETIP$methods(.chooseBestModel=function(modelList,criteria){
-  # Chooses best model using fit criteria.
-  
-  if (criteria == "AdjRSq"){
-      bestr2 = 0
-  bestModel = NA
-  for (modelK in modelList){
-    if(summary(modelK)$adj.r.squared>bestr2){
-      bestr2=summary(modelK)$adj.r.squared
-      bestModel = modelK
-    }
-  }
-  }
-  
-  return(bestModel)
-  
-  print("sdgkj")
-  
-})
+
+
+x$findBestSubset()
 
 ```
 
+
+
 ### 6.2
+
+Forward selection starts with the null model. At each step afterwards, it declares the best model with $k+1$ features to be the model that has the lowest residual sum of square errors when adding 1 more feature to the best $k$-featured model.
+
 ```{r}
 ALMO_ETIP$methods(forwardSelection = function(){
   # Let's first Naiively find the best model at each number of features
@@ -214,10 +230,16 @@ ALMO_ETIP$methods(forwardSelection = function(){
 )
 
 
+x$forwardSelection()
+
+
 ```
 
 
 ### 6.3
+
+
+Backwards selection works by starting with the fully saturated model. It finds the best model with $k-1$ to be the model that has the least residual sum of squares error when removing one feature from model $k$.
 
 ```{r}
 
@@ -280,13 +302,8 @@ ALMO_ETIP$methods(backwardSelection = function(){
 
 
 
-x = ALMO_ETIP$new(dataset=iris[,-c(5)],
-                    response="Sepal.Length"
-)
 
 
-x$findBestSubset()
-x$forwardSelection()
 
 x$backwardSelection()
 
@@ -415,6 +432,7 @@ The problem asks us to build a logistic regression model using the default data 
 
 default = read.csv("Default.csv")
 
+
 dflt_n = nrow(default)
 default$default = recode(default$default, No = 0, Yes = 1)
 
@@ -450,11 +468,83 @@ apply(dflt_tries2, 1, function(x) dflt_log(x, formula = default ~ income + balan
 
 ### Question 6
 
+#### (a)
+
+For part a, just a straightforward application of GLM, and extracting the coefficents and standard erros from the summary. The standard errors are 4.8952e-06, and 2.2737e-04.
+
+```{r}
+library(readr)
+library(boot)
+set.seed(24)
+
+Default <- read_csv("Default.csv")
+Default$default = as.factor(Default$default)
+
+model = glm(default ~ income + balance,family="binomial",data=Default)
+
+
+
+modelSummary=summary(model)
+
+
+cat(sprintf("Coefficent for Income is :%.5g\nCoefficient for balance is:%.5g\n",modelSummary$coefficients["income",][1],modelSummary$coefficients["balance",][1]))
+
+cat(sprintf("\n\nStdev for Income is :%.5g\nStdev for balance is:%.5g\n",modelSummary$coefficients["income",][2],modelSummary$coefficients["balance",][2]))
+
+
+```
+
+
+#### (b)
+
+Part b introduces a function that lets us bootstrap for our statistic of interest.
+
+```{r}
+
+boot.fn = function(data,index){
+  newData = data[index,]
+  newModel = glm(default ~ income + balance,family="binomial",data=newData)
+
+
+
+  newModelSummary=summary(newModel)
+
+  return(c(newModelSummary$coefficients["income",][1],newModelSummary$coefficients["balance",][1]))
+  
+  
+}
+```
+
+#### (c)
+
+Part c creates that bootstrap estimate by sampling with replacement from the Default dataset, and then developing an estimate for the standard error of the coefficients from that. The coefficients are almost identically the same in the point estimate.
+```{r}
+
+stdevVector = boot(Default,boot.fn,1000)
+
+
+print(stdevVector)
+```
+
+
+#### (d)
+
+The standard error for balance is lower than the estimate provided by the parametric model. The standard error for income is higher than the one provided by the parametric model. When comparing the significant figures, though, the estimates are similar.
+
+
+
+
 ### Question 9
 Part a) the estimate of the population mean is  22.53281.
 ```{r}
 library(MASS)
 attach(Boston)
+
+boot.fn <- function(data, index) {
+  mu <- mean(data[index])
+  return (mu)
+}
+
 muh <- mean(medv)
 muh
 ```
@@ -507,3 +597,128 @@ boot(medv, boot.fn2, 1000)
 ```
 
 ## Appendix
+
+
+```{r, eval=F}
+
+# ALMO_ETIP : A Linear Model Over-Engineered To Impress Professor
+
+ALMO_ETIP <- setRefClass("LinearModel",
+                           fields=c("dataset",
+                                    "response",
+                                    ".trainDataset",
+                                    ".testDataset",
+                                    ".k",
+                                    ".featureNames"
+                                    ),
+                           methods = list(
+                             
+                             # Initializer function creates 
+                             
+                             initialize = function(dataset,response,p=0.1){
+                               
+                               # Deliniates what data is available to predict our response
+                               # and the response
+                               .self$dataset = dataset
+                               .self$response = response
+                               .self$.featureNames = colnames(dataset)[colnames(dataset)!=response]
+                               
+                               # Hoping this saves some computation
+                               .self$.k = ncol(dataset) - 1
+                               
+                               # The test/train data will be used for cross-validation
+                               testIndex = .createTestAndTrainDataset(p)
+                               .self$.trainDataset = dataset[-c(testIndex),]
+                               .self$.testDataset = dataset[testIndex,]
+                              
+                               },
+                             
+                             .createTestAndTrainDataset = function(testPct){
+                               # Divide the dataset into test and training data based
+                               # on the percentage desired to hold for testing
+                               n = nrow(.self$dataset)
+                               testSize = testPct*n
+                               testDataIndex = sample(1:n,testSize)
+                               return(testDataIndex)
+                             },
+                             
+                             .crossValidate = function(model,criteria="AdjR2"){
+                               print("ma")
+                             }
+                             
+                           )
+                           )
+
+ALMO_ETIP$methods(findBestSubset = function(){
+  # Let's first Naiively find the best model at each number of features
+  bestModelWithiFeatures = list()
+  for (i in 1:.self$.k){
+    # Easier and clearer to make the objects I'll iterate through,
+    # so the code is easier to read
+    kChooseiIndices = combn(1:.self$.k,i)
+
+    
+    # Can't really think of any better way to do this than "MAX=0, IF GREATER NEW MAX"
+    bestr2 = 0
+    bestModel = 999
+    
+    for (j in 1:ncol(kChooseiIndices)){
+   
+      candidateiFeatures = .self$.featureNames[kChooseiIndices[,j]]
+
+      # This was an unwieldy formula, so I split it up into builders
+      xPartOfFormula = paste(candidateiFeatures,collapse="+")
+      regressionFormula = as.formula(paste(.self$response,"~",xPartOfFormula))
+      
+      
+      candidateModel = lm(regressionFormula,data=.self$.trainDataset)
+      
+      if(summary(candidateModel)$r.squared>bestr2){
+        bestModel = candidateModel
+        bestr2 = summary(candidateModel)$r.squared
+      }
+    
+    }  
+      if(bestr2==0){
+        stop("Something has gone horribly wrong.")
+      }
+      else{
+        bestModelWithiFeatures[[i]] = bestModel
+
+      }
+    
+
+      
+    
+    
+      
+  }
+  
+  
+  # Next lets find the best model among the best models. 
+  bestModel = .self$.chooseBestModel(bestModelWithiFeatures,"AdjRSq")
+  return(bestModel)
+})
+
+
+ALMO_ETIP$methods(.chooseBestModel=function(modelList,criteria){
+  # Chooses best model using fit criteria.
+  
+  if (criteria == "AdjRSq"){
+      bestr2 = 0
+  bestModel = NA
+  for (modelK in modelList){
+    if(summary(modelK)$adj.r.squared>bestr2){
+      bestr2=summary(modelK)$adj.r.squared
+      bestModel = modelK
+    }
+  }
+  }
+  
+  return(bestModel)
+  
+  
+})
+
+
+```
