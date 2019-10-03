@@ -715,6 +715,45 @@ ALMO_ETIP$methods(.chooseBestModel=function(modelList,criteria){
   }
   }
   
+  else if (criteria == "AIC"){
+      bestAIC = Inf
+  bestModel = NA
+  for (modelK in modelList){
+    if(AIC(modelK) < bestAIC){
+      bestAIC=AIC(modelK)
+      bestModel = modelK
+    }
+  }
+  }
+  
+    else if (criteria == "BIC"){
+      bestBIC = Inf
+  bestModel = NA
+  for (modelK in modelList){
+    if(BIC(modelK) < bestBIC){
+      bestBIC=BIC(modelK)
+      bestModel = modelK
+    }
+  }
+  }
+  
+  
+  
+      else if (criteria == "CrossValidate"){
+      bestRSS = Inf
+  bestModel = NA
+  for (modelK in modelList){
+    predictions = predict(modelK,newdata=.self$testDataset)
+    RSS = (predictions - self$testDataset[,response])^2
+    if(RSS < bestRSS){
+      bestRSS=RSS
+      bestModel = modelK
+    }
+  
+  }
+  }
+  
+  
   return(bestModel)
   
   
