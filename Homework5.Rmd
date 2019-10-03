@@ -451,35 +451,59 @@ apply(dflt_tries2, 1, function(x) dflt_log(x, formula = default ~ income + balan
 ### Question 6
 
 ### Question 9
+Part a) the estimate of the population mean is  22.53281.
 ```{r}
 library(MASS)
 attach(Boston)
 muh <- mean(medv)
 muh
+```
+Part b) the estimate of the standard error is 0.4088611. The standard error of the mean is a measure of the dispersion of sample means around the population mean.
+```{r}
 seh <- sd(medv) / sqrt(dim(Boston)[1])
 seh
+```
+Part c) The bootstrap estimated standard error is very close to the one computed in the part b)
+```{r}
 library(boot)
 boot.f <- function(data, index) {
   mu <- mean(data[index])
   return (mu)
 }
 boot(medv, boot.fn, 1000)
+```
+Part d) The bootstrap confidence interval is identical to the t.test interval up to the tens decimal place.
+```{r}
 t.test(medv)
 CI.mu.hat <- c(22.53 - 2 * 0.4119, 22.53 + 2 * 0.4119)
 CI.mu.hat
+```
+Part e) The estimated median value is 21.2.
+```{r}
 medh <- median(medv)
 medh
+```
+Part f) The estimated median value of 21.2 which is equal to the value obtained in (e), with a standard error of 0.3874 which is relatively small compared to median value.
+```{r}
 boot.f1 <- function(data, index) {
   mu <- median(data[index])
   return (mu)
 }
-boot(medv, boot.f1, 1000)
+```
+Part g) The tenth-percentile of these data is 12.75.
+```{r}
 p.hat <- quantile(medv, c(0.1))
 p.hat
 
+```
+Part h) The estimated standard error using the bootstrap is 0.4912 which is relatively small comparing with the value of 12.75.
+```{r}
+boot.fn2 <- function(data, index) {
+    mu <- quantile(data[index], c(0.1))
+    return (mu)
+}
+boot(medv, boot.fn2, 1000)
 
 ```
-
-
 
 ## Appendix
